@@ -30,18 +30,19 @@ proc fileColor(kind: PathComponent): ForegroundColor =
 
 proc redraw(tb: var TerminalBuffer, itemIndex: var int) =
   let cwd = getCurrentDir()
+  let depthSpan = 3
   var x, y: int
   for d in parentDirs(cwd, fromRoot = true):
-    inc(x, 2)
+    inc(x, depthSpan)
     inc(y)
 
     let col = getFileInfo(d).kind.fileColor()
     tb.setForegroundColor(col, true)
-    tb.write(x, y, lastPathPart(d))
+    tb.write(x-depthSpan, y, "|- " & lastPathPart(d))
     tb.resetAttributes()
 
     if cwd == d:
-      inc(x, 2)
+      inc(x, depthSpan)
       var i: int
       for k, p in walkDir(d):
         if searchQuery notin lastPathPart(p):
@@ -51,23 +52,23 @@ proc redraw(tb: var TerminalBuffer, itemIndex: var int) =
         if itemIndex == i:
           tb.setForegroundColor(fgBlack, true)
           tb.setBackgroundColor(bgGreen)
-          tb.write(x, y, lastPathPart(p))
+          tb.write(x-depthSpan, y, "|- " & lastPathPart(p))
           output = p
           tb.resetAttributes()
 
           if k == pcDir:
-            inc(x, 2)
+            inc(x, depthSpan)
             for k, p in walkDir(p):
               inc(y)
               let col = fileColor(k)
               tb.setForegroundColor(col, true)
-              tb.write(x, y, lastPathPart(p))
+              tb.write(x-depthSpan*2, y, "|  |- " & lastPathPart(p))
               tb.resetAttributes()
-            dec(x, 2)
+            dec(x, depthSpan)
         else:
           let col = fileColor(k)
           tb.setForegroundColor(col, true)
-          tb.write(x, y, lastPathPart(p))
+          tb.write(x-depthSpan, y, "|- " & lastPathPart(p))
         inc(i)
         tb.resetAttributes()
 
