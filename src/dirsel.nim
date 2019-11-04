@@ -7,6 +7,7 @@ var
   oldStdin = stdin
   oldStdout = stdout
   oldStderr = stderr
+  searchQuery = ""
 
 proc exitProc() {.noconv.} =
   ## 終了処理
@@ -43,7 +44,10 @@ proc redraw(tb: var TerminalBuffer, itemIndex: var int) =
       inc(x, 2)
       var i: int
       for k, p in walkDir(d):
+        if searchQuery notin lastPathPart(p):
+          continue
         inc(y)
+
         if itemIndex == i:
           tb.setForegroundColor(fgBlack, true)
           tb.setBackgroundColor(bgGreen)
@@ -71,6 +75,8 @@ proc downDir(itemIndex: var int) =
   let cwd = getCurrentDir()
   var i: int
   for k, p in walkDir(cwd):
+    if searchQuery notin lastPathPart(p):
+      continue
     if itemIndex == i:
       if k == pcDir:
         setCurrentDir(p)
@@ -119,6 +125,8 @@ proc main =
       discard
     of Key.Enter:
       exitProc()
+    of Key.S:
+      searchQuery = "j"
     else: discard
 
     tb.display()
