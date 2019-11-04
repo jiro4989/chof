@@ -29,6 +29,10 @@ proc redraw(tb: var TerminalBuffer, itemIndex: var int) =
           tb.write(x, y, lastPathPart(p))
           output = p
         else:
+          var col =
+            if k == pcDir: fgBlue
+            else: fgWhite
+          tb.setForegroundColor(col, true)
           tb.write(x, y, lastPathPart(p))
         inc(i)
         tb.resetAttributes()
