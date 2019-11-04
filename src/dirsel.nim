@@ -1,22 +1,24 @@
 import os, strutils
 import illwill
 
-when false:
-  let cwd = getCurrentDir().parentDir().parentDir().parentDir()
-  var depth: int
-  for d in parentDirs(cwd, fromRoot = true):
-    inc(depth)
-    echo repeat(" ", depth).join() & lastPathPart(d)
-    if cwd == d:
-      inc(depth)
-      for k, p in walkDir(d):
-        echo repeat(" ", depth).join() & lastPathPart(p)
-
 proc exitProc() {.noconv.} =
   ## 終了処理
   illwillDeinit()
   showCursor()
   quit(0)
+
+proc redraw(tb: var TerminalBuffer) =
+  let cwd = getCurrentDir()
+  var x, y: int
+  for d in parentDirs(cwd, fromRoot = true):
+    inc(x, 2)
+    inc(y)
+    tb.write(x, y, lastPathPart(d))
+    if cwd == d:
+      inc(x, 2)
+      for k, p in walkDir(d):
+        inc(y)
+        tb.write(x, y, lastPathPart(p))
 
 proc main =
   # 初期設定。とりあえずやっとく
@@ -33,6 +35,9 @@ proc main =
     var tb = newTerminalBuffer(tw, th)
     tb.setForegroundColor(fgWhite, true)
 
+    # 画面の再描画
+    tb.redraw()
+
     var key = getKey()
     case key
     of Key.None: discard
@@ -42,7 +47,8 @@ proc main =
     of Key.K:
       discard
     of Key.H:
-      discard
+      let cwd = getCurrentDir()
+      setCurrentDir(cwd.parentDir())
     of Key.L:
       discard
     of Key.Space:
