@@ -3,11 +3,21 @@ import illwill
 
 var
   output: string
+  tty = open("/dev/tty", fmReadWrite)
+  oldStdin = stdin
+  oldStdout = stdout
+  oldStderr = stderr
 
 proc exitProc() {.noconv.} =
   ## 終了処理
   illwillDeinit()
   showCursor()
+
+  tty.close()
+  stdin = oldStdin
+  stdout = oldStdout
+  stderr = oldStderr
+
   echo output
   quit(0)
 
@@ -104,4 +114,9 @@ proc main =
     tb.display()
     sleep(20)
 
-main()
+when isMainModule:
+  stdin = tty
+  stdout = tty
+  stderr = tty
+
+  main()
