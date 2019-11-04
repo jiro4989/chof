@@ -11,13 +11,24 @@ proc exitProc() {.noconv.} =
   echo output
   quit(0)
 
+proc fileColor(kind: PathComponent): ForegroundColor =
+  if kind == pcDir:
+    fgBlue
+  else:
+    fgWhite
+
 proc redraw(tb: var TerminalBuffer, itemIndex: var int) =
   let cwd = getCurrentDir()
   var x, y: int
   for d in parentDirs(cwd, fromRoot = true):
     inc(x, 2)
     inc(y)
+
+    let col = getFileInfo(d).kind.fileColor()
+    tb.setForegroundColor(col, true)
     tb.write(x, y, lastPathPart(d))
+    tb.resetAttributes()
+
     if cwd == d:
       inc(x, 2)
       var i: int
@@ -29,9 +40,7 @@ proc redraw(tb: var TerminalBuffer, itemIndex: var int) =
           tb.write(x, y, lastPathPart(p))
           output = p
         else:
-          var col =
-            if k == pcDir: fgBlue
-            else: fgWhite
+          let col = fileColor(k)
           tb.setForegroundColor(col, true)
           tb.write(x, y, lastPathPart(p))
         inc(i)
