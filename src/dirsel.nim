@@ -67,13 +67,15 @@ proc redraw(tb: var TerminalBuffer, itemIndex: var int) =
         inc(i)
         tb.resetAttributes()
 
-proc downDir(itemIndex: int) =
+proc downDir(itemIndex: var int) =
   let cwd = getCurrentDir()
   var i: int
   for k, p in walkDir(cwd):
     if itemIndex == i:
-      setCurrentDir(p)
-      return
+      if k == pcDir:
+        setCurrentDir(p)
+        itemIndex = 0
+        return
     inc(i)
 
 proc main =
@@ -111,7 +113,6 @@ proc main =
       setCurrentDir(cwd.parentDir())
     of Key.L:
       downDir(itemIndex)
-      itemIndex = 0
     of Key.Space:
       discard
     of Key.C:
