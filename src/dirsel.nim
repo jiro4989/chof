@@ -67,6 +67,15 @@ proc redraw(tb: var TerminalBuffer, itemIndex: var int) =
         inc(i)
         tb.resetAttributes()
 
+proc downDir(itemIndex: int) =
+  let cwd = getCurrentDir()
+  var i: int
+  for k, p in walkDir(cwd):
+    if itemIndex == i:
+      setCurrentDir(p)
+      return
+    inc(i)
+
 proc main =
   # 初期設定。とりあえずやっとく
   illwillInit(fullscreen=true)
@@ -101,8 +110,8 @@ proc main =
       let cwd = getCurrentDir()
       setCurrentDir(cwd.parentDir())
     of Key.L:
+      downDir(itemIndex)
       itemIndex = 0
-      discard
     of Key.Space:
       discard
     of Key.C:
