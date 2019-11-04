@@ -39,6 +39,17 @@ proc redraw(tb: var TerminalBuffer, itemIndex: var int) =
           tb.setBackgroundColor(bgGreen)
           tb.write(x, y, lastPathPart(p))
           output = p
+          tb.resetAttributes()
+
+          if k == pcDir:
+            inc(x, 2)
+            for k, p in walkDir(p):
+              inc(y)
+              let col = fileColor(k)
+              tb.setForegroundColor(col, true)
+              tb.write(x, y, lastPathPart(p))
+              tb.resetAttributes()
+            dec(x, 2)
         else:
           let col = fileColor(k)
           tb.setForegroundColor(col, true)
@@ -76,9 +87,11 @@ proc main =
       if itemIndex < 0:
         itemIndex = 0
     of Key.H:
+      itemIndex = 0
       let cwd = getCurrentDir()
       setCurrentDir(cwd.parentDir())
     of Key.L:
+      itemIndex = 0
       discard
     of Key.Space:
       discard
