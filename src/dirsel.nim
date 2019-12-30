@@ -1,4 +1,6 @@
-import os, strutils
+import os, strutils, tables
+from unicode import toRunes, runeAt, `$`
+
 import illwill
 
 var
@@ -8,6 +10,34 @@ var
   oldStdout = stdout
   oldStderr = stderr
   searchQuery = ""
+
+type
+  GroupedFiles* = ref object
+    key*: string
+    files*: seq[File]
+
+proc `$`*(self: GroupedFiles): string = $self[]
+
+proc listFilesGroupByPrefix*(dir: string): seq[GroupedFiles] =
+  ## ファイル名のプレフィックスでグルーピング。
+  ## 半角文字のみグルーピング。
+  ## マルチバイト文字はその他扱い。
+  var tbl = initTable[string, seq[string]]()
+  tbl["other"] = @[]
+  for k, p in walkDir(dir):
+    let
+      base = lastPathPart(p)
+      prefix = base[0]
+      prefixStr = $prefix
+    if prefix.isAlphaAscii() or prefix == '.':
+      if not tbl.hasKey(prefixStr):
+        tbl[prefixStr] = @[]
+      tbl[prefixStr].add(base)
+    else:
+      tbl["other"].add(base)
+  echo tbl
+
+proc selectElement*() = discard
 
 proc exitProc() {.noconv.} =
   ## 終了処理
@@ -133,7 +163,7 @@ proc main =
     tb.display()
     sleep(20)
 
-when isMainModule:
+when isMainModule and not defined modeTest:
   stdin = tty
   stdout = tty
   stderr = tty
