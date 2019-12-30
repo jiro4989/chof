@@ -27,9 +27,9 @@ proc listFilesGroupByPrefix*(dir: string): seq[GroupedFiles] =
   for k, p in walkDir(dir):
     let
       base = lastPathPart(p)
-      prefix = base[0]
+      prefix = base[0].toLowerAscii
       prefixStr = $prefix
-    if prefix.isAlphaAscii() or prefix == '.':
+    if prefix.isAlphaAscii or prefix == '.':
       if not tbl.hasKey(prefixStr):
         tbl[prefixStr] = @[]
       tbl[prefixStr].add(base)
