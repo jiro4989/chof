@@ -1,5 +1,5 @@
 import os, strutils, tables
-from unicode import toRunes, runeAt, `$`
+export tables
 
 import illwill
 
@@ -12,30 +12,32 @@ var
   searchQuery = ""
 
 type
-  GroupedFiles* = ref object
-    key*: string
-    files*: seq[File]
+  GroupedFiles* = OrderedTable[string, seq[string]]
+  Terminal = ref object
+    tb: TerminalBuffer
+    x, y: int
 
-proc `$`*(self: GroupedFiles): string = $self[]
-
-proc listFilesGroupByPrefix*(dir: string): seq[GroupedFiles] =
+proc listFilesGroupByPrefix*(dir: string): GroupedFiles =
   ## ファイル名のプレフィックスでグルーピング。
   ## 半角文字のみグルーピング。
   ## マルチバイト文字はその他扱い。
-  var tbl = initTable[string, seq[string]]()
-  tbl["other"] = @[]
+  result = initOrderedTable[string, seq[string]]()
+  result["~"] = @[]
   for k, p in walkDir(dir):
     let
       base = lastPathPart(p)
       prefix = base[0].toLowerAscii
       prefixStr = $prefix
     if prefix.isAlphaAscii or prefix == '.':
-      if not tbl.hasKey(prefixStr):
-        tbl[prefixStr] = @[]
-      tbl[prefixStr].add(base)
+      if not result.hasKey(prefixStr):
+        result[prefixStr] = @[]
+      result[prefixStr].add(base)
     else:
-      tbl["other"].add(base)
-  echo tbl
+      result["~"].add(base)
+  proc cmp(x, y: (string, seq[string])): int =
+    if x[0] < y[0]: 0
+    else: 1
+  result.sort(cmp)
 
 proc selectElement*() = discard
 
@@ -58,49 +60,17 @@ proc fileColor(kind: PathComponent): ForegroundColor =
   else:
     fgWhite
 
-proc redraw(tb: var TerminalBuffer, itemIndex: var int) =
+proc redraw(term: Terminal) =
   let cwd = getCurrentDir()
-  let depthSpan = 3
-  var x, y: int
-  for d in parentDirs(cwd, fromRoot = true):
-    inc(x, depthSpan)
+  let files = listFilesGroupByPrefix(cwd)
+  var y: int
+  for key, paths in files.pairs:
+    if term.y == y:
+      term.tb.setBackgroundColor(bgGreen)
+    let line = $key & ": " & paths.join(" ")
+    term.tb.write(0, y, line)
+    term.tb.resetAttributes()
     inc(y)
-
-    let col = getFileInfo(d).kind.fileColor()
-    tb.setForegroundColor(col, true)
-    tb.write(x-depthSpan, y, "|- " & lastPathPart(d))
-    tb.resetAttributes()
-
-    if cwd == d:
-      inc(x, depthSpan)
-      var i: int
-      for k, p in walkDir(d):
-        if searchQuery notin lastPathPart(p):
-          continue
-        inc(y)
-
-        if itemIndex == i:
-          tb.setForegroundColor(fgBlack, true)
-          tb.setBackgroundColor(bgGreen)
-          tb.write(x-depthSpan, y, "|- " & lastPathPart(p))
-          output = p
-          tb.resetAttributes()
-
-          if k == pcDir:
-            inc(x, depthSpan)
-            for k, p in walkDir(p):
-              inc(y)
-              let col = fileColor(k)
-              tb.setForegroundColor(col, true)
-              tb.write(x-depthSpan*2, y, "|  |- " & lastPathPart(p))
-              tb.resetAttributes()
-            dec(x, depthSpan)
-        else:
-          let col = fileColor(k)
-          tb.setForegroundColor(col, true)
-          tb.write(x-depthSpan, y, "|- " & lastPathPart(p))
-        inc(i)
-        tb.resetAttributes()
 
 proc downDir(itemIndex: var int) =
   let cwd = getCurrentDir()
@@ -121,35 +91,35 @@ proc main =
   setControlCHook(exitProc)
   hideCursor()
 
-  var itemIndex: int
+  var term = new Terminal
   while true:
     # 後から端末の幅が変わる場合があるため
     # 端末の幅情報はループの都度取得
     let tw = terminalWidth()
     let th = terminalHeight()
 
-    var tb = newTerminalBuffer(tw, th)
+    term.tb = newTerminalBuffer(tw, th)
     #tb.setForegroundColor(fgWhite, true)
 
     # 画面の再描画
-    tb.redraw(itemIndex)
+    term.redraw()
 
     var key = getKey()
     case key
     of Key.None: discard
     of Key.Escape, Key.Q: exitProc()
     of Key.J:
-      inc(itemIndex)
+      inc(term.y)
     of Key.K:
-      dec(itemIndex)
-      if itemIndex < 0:
-        itemIndex = 0
+      dec(term.y)
+      if term.y < 0:
+        term.y = 0
     of Key.H:
-      itemIndex = 0
+      term.y = 0
       let cwd = getCurrentDir()
       setCurrentDir(cwd.parentDir())
     of Key.L:
-      downDir(itemIndex)
+      discard
     of Key.Space:
       discard
     of Key.C:
@@ -160,7 +130,7 @@ proc main =
       searchQuery = "j"
     else: discard
 
-    tb.display()
+    term.tb.display()
     sleep(20)
 
 when isMainModule and not defined modeTest:
