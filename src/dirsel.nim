@@ -18,6 +18,7 @@ type
     selectedItemIndex: int
     cwd: string
     files: seq[string]
+    width, height: int
 
 proc setCurrentFiles(term: var Terminal) =
   var files: seq[string]
@@ -61,9 +62,21 @@ proc searchPrefix(term: var Terminal, prefix: char) =
 proc redraw(term: Terminal) =
   let cwd = term.cwd
   term.tb.write(0, 0, cwd)
-  var y = 0
-  for path in term.files:
-    if term.selectedItemIndex == y:
+
+  let
+    pageSize = term.height - 1
+    sIdx = term.selectedItemIndex
+    startIdx = int(sIdx / pageSize) * pageSize
+    files = term.files
+
+  var
+    y = 0
+    endIdx = startIdx + pageSize
+  if files.len <= endIdx:
+    endIdx = files.len - 1
+
+  for path in files[startIdx .. endIdx]:
+    if sIdx - startIdx == y:
       term.tb.setBackgroundColor(bgGreen)
       output = cwd / path
     term.tb.write(0, y+1, path)
@@ -84,6 +97,8 @@ proc main =
     let th = terminalHeight()
 
     term.tb = newTerminalBuffer(tw, th)
+    term.width = tw
+    term.height = th
     #tb.setForegroundColor(fgWhite, true)
 
     # 画面の再描画
