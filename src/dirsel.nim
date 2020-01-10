@@ -1,5 +1,6 @@
-import os, strutils, tables, algorithm
+import os, strutils, tables, algorithm, sequtils
 from terminal import getch
+from unicode import toRunes, `$`
 
 import illwill
 
@@ -19,6 +20,8 @@ type
     cwd: string
     files: seq[string]
     width, height: int
+    searchQuery: string
+    filteredFiles: seq[string]
 
 proc setCurrentFiles(term: var Terminal) =
   var files: seq[string]
@@ -27,6 +30,7 @@ proc setCurrentFiles(term: var Terminal) =
     files.add(base)
   files.sort()
   term.files = files
+  term.filteredFiles = files
 
 proc newTerminal(): Terminal =
   result = Terminal()
@@ -67,7 +71,7 @@ proc redraw(term: Terminal) =
     pageSize = term.height - 1
     sIdx = term.selectedItemIndex
     startIdx = int(sIdx / pageSize) * pageSize
-    files = term.files
+    files = term.filteredFiles
 
   var
     y = 0
@@ -106,11 +110,33 @@ proc main =
 
     var key = getKey()
     case key
-    of Key.None: discard
-    of Key.Escape: exitProc()
+    of Key.None:
+      discard
+    of Key.Escape:
+      exitProc()
+    of Key.BackSpace:
+      if 0 < term.searchQuery.len:
+        term.searchQuery = $term.searchQuery.toRunes[0..^2]
     of Key.F:
       let key = getch()
       term.searchPrefix(key)
+    of Key.E:
+      while true:
+        term.redraw()
+
+        let key = getKey()
+        case key
+        of Key.Enter, Key.Escape:
+          break
+        of Key.BackSpace:
+          if 0 < term.searchQuery.len:
+            term.searchQuery = $term.searchQuery.toRunes[0..^2]
+        else:
+          term.searchQuery.add(key.`$`[0].toLowerAscii)
+          term.filteredFiles = term.files.filterIt(term.searchQuery in it)
+
+        term.tb.display()
+        sleep(20)
     of Key.H:
       term.selectedItemIndex = 0
       term.cwd = term.cwd.parentDir()
