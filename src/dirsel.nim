@@ -130,15 +130,21 @@ proc main =
        Key.Z:
       let key = ($key)[0].toLowerAscii
       term.searchPrefix(key)
+    of Key.H:
+      term.selectedItemIndex = 0
+      term.cwd = term.cwd.parentDir()
+      term.setCurrentFiles()
     of Key.J:
       inc(term.selectedItemIndex)
     of Key.K:
       dec(term.selectedItemIndex)
       if term.selectedItemIndex < 0:
         term.selectedItemIndex = 0
-    of Key.H:
+    of Key.L:
+      let base = term.files[term.selectedItemIndex]
+      let path = term.cwd / base
+      term.cwd = path
       term.selectedItemIndex = 0
-      term.cwd = term.cwd.parentDir()
       term.setCurrentFiles()
     of Key.Enter:
       exitProc()
