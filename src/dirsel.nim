@@ -1,5 +1,5 @@
 import os, strutils, tables, algorithm
-export tables
+from terminal import getch
 
 import illwill
 
@@ -93,36 +93,16 @@ proc main =
     case key
     of Key.None: discard
     of Key.Escape: exitProc()
-    of Key.A,
-       Key.B,
-       Key.C,
-       Key.D,
-       Key.E,
-       Key.F,
-       Key.G,
-       Key.I,
-       Key.M,
-       Key.N,
-       Key.O,
-       Key.P,
-       Key.Q,
-       Key.R,
-       Key.S,
-       Key.T,
-       Key.U,
-       Key.V,
-       Key.W,
-       Key.X,
-       Key.Y,
-       Key.Z:
-      let key = ($key)[0].toLowerAscii
+    of Key.F:
+      let key = getch()
       term.searchPrefix(key)
     of Key.H:
       term.selectedItemIndex = 0
       term.cwd = term.cwd.parentDir()
       term.setCurrentFiles()
     of Key.J:
-      inc(term.selectedItemIndex)
+      if term.selectedItemIndex < term.files.len - 1:
+        inc(term.selectedItemIndex)
     of Key.K:
       dec(term.selectedItemIndex)
       if term.selectedItemIndex < 0:
