@@ -47,7 +47,8 @@ proc exitProc() {.noconv.} =
   stdout = oldStdout
   stderr = oldStderr
 
-  echo output
+  if output != "":
+    echo output
   quit(0)
 
 proc searchPrefix(term: var Terminal, prefix: char) =
@@ -112,7 +113,8 @@ proc main =
     case key
     of Key.None:
       discard
-    of Key.Escape:
+    of Key.Escape, Key.Q:
+      output = ""
       exitProc()
     of Key.BackSpace:
       if 0 < term.searchQuery.len:
@@ -120,7 +122,7 @@ proc main =
     of Key.F:
       let key = getch()
       term.searchPrefix(key)
-    of Key.E:
+    of Key.I:
       while true:
         term.redraw()
 
