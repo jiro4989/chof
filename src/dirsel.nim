@@ -9,7 +9,6 @@ var
   tty = open("/dev/tty", fmReadWrite)
   oldStdin = stdin
   oldStdout = stdout
-  oldStderr = stderr
   searchQuery = ""
 
 type
@@ -45,7 +44,6 @@ proc exitProc() {.noconv.} =
   tty.close()
   stdin = oldStdin
   stdout = oldStdout
-  stderr = oldStderr
 
   if output != "":
     echo output
@@ -116,29 +114,29 @@ proc main =
     of Key.Escape, Key.Q:
       output = ""
       exitProc()
-    of Key.BackSpace:
-      if 0 < term.searchQuery.len:
-        term.searchQuery = $term.searchQuery.toRunes[0..^2]
     of Key.F:
       let key = getch()
       term.searchPrefix(key)
     of Key.I:
-      while true:
-        term.redraw()
+      discard
+      # WIP
+      when false:
+        while true:
+          term.redraw()
 
-        let key = getKey()
-        case key
-        of Key.Enter, Key.Escape:
-          break
-        of Key.BackSpace:
-          if 0 < term.searchQuery.len:
-            term.searchQuery = $term.searchQuery.toRunes[0..^2]
-        else:
-          term.searchQuery.add(key.`$`[0].toLowerAscii)
-          term.filteredFiles = term.files.filterIt(term.searchQuery in it)
+          let key = getKey()
+          case key
+          of Key.Enter, Key.Escape:
+            break
+          of Key.BackSpace:
+            if 0 < term.searchQuery.len:
+              term.searchQuery = $term.searchQuery.toRunes[0..^2]
+          else:
+            term.searchQuery.add(key.`$`[0].toLowerAscii)
+            term.filteredFiles = term.files.filterIt(term.searchQuery in it)
 
-        term.tb.display()
-        sleep(20)
+          term.tb.display()
+          sleep(20)
     of Key.H:
       term.selectedItemIndex = 0
       term.cwd = term.cwd.parentDir()
@@ -166,6 +164,5 @@ proc main =
 when isMainModule and not defined modeTest:
   stdin = tty
   stdout = tty
-  stderr = tty
 
   main()
