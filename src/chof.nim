@@ -71,6 +71,52 @@ proc searchPrefix(term: var Terminal, prefix: char) =
       term.selectedItemIndex = i
       break
 
+proc searchInteractively(term: var Terminal) =
+  discard # WIP
+  when false:
+    while true:
+      term.redraw()
+
+      let key = getKey()
+      case key
+      of Key.Enter, Key.Escape:
+        break
+      of Key.BackSpace:
+        if 0 < term.searchQuery.len:
+          term.searchQuery = $term.searchQuery.toRunes[0..^2]
+      else:
+        term.searchQuery.add(key.`$`[0].toLowerAscii)
+        term.filteredFiles = term.files.filterIt(term.searchQuery in it)
+
+      term.tb.display()
+      sleep(20)
+
+proc moveParentDir(term: var Terminal) =
+  term.selectedItemIndex = 0
+  let base = term.cwd.lastPathPart()
+  term.cwd = term.cwd.parentDir()
+  term.setCurrentFiles()
+  for i, f in term.files:
+    if f.name == base:
+      term.selectedItemIndex = i
+      break
+
+proc moveChildDir(term: var Terminal) =
+  let base = term.files[term.selectedItemIndex]
+  let path = term.cwd / base.name
+  term.cwd = path
+  term.selectedItemIndex = 0
+  term.setCurrentFiles()
+
+proc moveNextFile(term: var Terminal) =
+  if term.selectedItemIndex < term.files.len - 1:
+    inc(term.selectedItemIndex)
+
+proc movePreviousFile(term: var Terminal) =
+  dec(term.selectedItemIndex)
+  if term.selectedItemIndex < 0:
+    term.selectedItemIndex = 0
+
 proc redraw(term: Terminal) =
   let cwd = term.cwd
   term.tb.write(0, 0, cwd)
@@ -121,60 +167,21 @@ proc main =
     # 画面の再描画
     term.redraw()
 
-    var key = getKey()
+    let key = getKey()
     case key
-    of Key.None:
-      discard
+    of Key.None: discard
     of Key.Escape, Key.Q:
       output = ""
       exitProc()
     of Key.F:
       let key = getch()
       term.searchPrefix(key)
-    of Key.I:
-      discard
-      # WIP
-      when false:
-        while true:
-          term.redraw()
-
-          let key = getKey()
-          case key
-          of Key.Enter, Key.Escape:
-            break
-          of Key.BackSpace:
-            if 0 < term.searchQuery.len:
-              term.searchQuery = $term.searchQuery.toRunes[0..^2]
-          else:
-            term.searchQuery.add(key.`$`[0].toLowerAscii)
-            term.filteredFiles = term.files.filterIt(term.searchQuery in it)
-
-          term.tb.display()
-          sleep(20)
-    of Key.H:
-      term.selectedItemIndex = 0
-      let base = term.cwd.lastPathPart()
-      term.cwd = term.cwd.parentDir()
-      term.setCurrentFiles()
-      for i, f in term.files:
-        if f.name == base:
-          term.selectedItemIndex = i
-          break
-    of Key.J:
-      if term.selectedItemIndex < term.files.len - 1:
-        inc(term.selectedItemIndex)
-    of Key.K:
-      dec(term.selectedItemIndex)
-      if term.selectedItemIndex < 0:
-        term.selectedItemIndex = 0
-    of Key.L:
-      let base = term.files[term.selectedItemIndex]
-      let path = term.cwd / base.name
-      term.cwd = path
-      term.selectedItemIndex = 0
-      term.setCurrentFiles()
-    of Key.Enter:
-      exitProc()
+    of Key.I: term.searchInteractively()
+    of Key.H: term.moveParentDir()
+    of Key.J: term.moveNextFile()
+    of Key.K: term.movePreviousFile()
+    of Key.L: term.moveChildDir()
+    of Key.Enter: exitProc()
     else: discard
 
     term.tb.display()
