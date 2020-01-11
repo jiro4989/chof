@@ -1,5 +1,6 @@
 import os, strutils, tables, algorithm, sequtils
 from terminal import getch
+from strformat import `&`
 from unicode import toRunes, `$`
 
 import illwill
@@ -13,20 +14,28 @@ var
 
 type
   GroupedFiles* = OrderedTable[string, seq[string]]
+  FileRef = ref object
+    kind: PathComponent
+    name: string
+    size: BiggestInt
   Terminal = ref object
     tb: TerminalBuffer
     selectedItemIndex: int
     cwd: string
-    files: seq[string]
     width, height: int
     searchQuery: string
-    filteredFiles: seq[string]
+    files: seq[FileRef]
+    filteredFiles: seq[FileRef]
 
 proc setCurrentFiles(term: var Terminal) =
-  var files: seq[string]
+  var files: seq[FileRef]
   for kind, path in walkDir(term.cwd):
     let base = path.lastPathPart()
-    files.add(base)
+    let size =
+      if kind == pcFile: getFileSize(path)
+      else: 0
+    let f = FileRef(kind: kind, name: base, size: size)
+    files.add(f)
   files.sort()
   term.files = files
   term.filteredFiles = files
@@ -53,12 +62,12 @@ proc searchPrefix(term: var Terminal, prefix: char) =
   let
     idx = term.selectedItemIndex
     files = term.files
-  if idx + 1 < files.len and files[idx][0] == prefix and files[idx + 1][0] == prefix:
+  if idx + 1 < files.len and files[idx].name[0] == prefix and files[idx + 1].name[0] == prefix:
     inc(term.selectedItemIndex)
     return
 
   for i, file in files:
-    if file.startsWith(prefix):
+    if file.name.startsWith(prefix):
       term.selectedItemIndex = i
       break
 
@@ -81,8 +90,13 @@ proc redraw(term: Terminal) =
   for path in files[startIdx .. endIdx]:
     if sIdx - startIdx == y:
       term.tb.setBackgroundColor(bgGreen)
-      output = cwd / path
-    term.tb.write(0, y+1, path)
+      output = cwd / path.name
+    let
+      kind = path.kind.`$`[2]
+      name = path.name
+      size = path.size
+      line = &"[{kind}] {name} {size}"
+    term.tb.write(0, y+1, line)
     inc(y)
     term.tb.resetAttributes()
 
@@ -150,7 +164,7 @@ proc main =
         term.selectedItemIndex = 0
     of Key.L:
       let base = term.files[term.selectedItemIndex]
-      let path = term.cwd / base
+      let path = term.cwd / base.name
       term.cwd = path
       term.selectedItemIndex = 0
       term.setCurrentFiles()
