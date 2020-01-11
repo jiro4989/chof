@@ -82,3 +82,30 @@ suite "getSelectedFileIndex":
     check term.files.getSelectedFileIndex("10.txt") == 9
   test "not exists name":
     check term.files.getSelectedFileIndex("aaaaaaaaaa.txt") == 0
+
+suite "moveParentDir":
+  setup:
+    var term = Terminal(cwd: "./tests/testdata2/2")
+    term.setFiles()
+  test "./tests/testdata2/2":
+    term.moveParentDir()
+    check term.cwd.lastPathPart == "testdata2"
+    check term.files.len == 2
+    check term.childFiles.len == 3
+    check term.childFiles[0].name == "1.txt"
+    check term.parentFiles.len > 2
+
+suite "moveChildDir":
+  setup:
+    var term = Terminal(cwd: "./tests/testdata2")
+    term.setFiles()
+  test "./tests/testdata2/2":
+    term.selectedItemIndex = 1
+    term.moveChildDir()
+    check term.cwd.lastPathPart == "2"
+    check term.files.len == 3
+    check term.files[0].name == "4.txt"
+    check term.childFiles.len == 0
+    check term.parentFiles.len == 2
+    check term.parentFiles[0].name == "1"
+    check term.parentFiles[1].name == "2"
