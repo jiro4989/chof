@@ -167,6 +167,10 @@ proc drawFilePane(tb: var TerminalBuffer, files: seq[FileRef],
       name = file.name
       size = file.size
       line = &"[{kind}] {name} {size}"
+    if file.kind == pcDir:
+      tb.setForegroundColor(fgBlue)
+    else:
+      tb.setForegroundColor(fgWhite)
     tb.write(x, y+1, line)
     inc(y)
     tb.resetAttributes()
