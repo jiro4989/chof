@@ -24,26 +24,54 @@ type
     cwd: string
     width, height: int
     searchQuery: string
+    parentFiles: seq[FileRef]
     files: seq[FileRef]
+    childFiles: seq[FileRef]
     filteredFiles: seq[FileRef]
 
-proc setCurrentFiles(term: var Terminal) =
-  var files: seq[FileRef]
-  for kind, path in walkDir(term.cwd):
+func getSelectedFileFullPath(term: Terminal): string =
+  let idx = term.selectedItemIndex
+  let base = term.files[idx].name
+  let path = term.cwd / base
+  result = path
+
+proc getFileRefs(path: string): seq[FileRef] =
+  for kind, path in walkDir(path):
     let base = path.lastPathPart()
     let size =
       if kind == pcFile: getFileSize(path)
       else: 0
     let f = FileRef(kind: kind, name: base, size: size)
-    files.add(f)
-  files = files.sortedByIt(it.name)
-  term.files = files
-  term.filteredFiles = files
+    result.add(f)
+  result = result.sortedByIt(it.name)
+
+proc setParentFiles(term: var Terminal) =
+  let file = term.cwd.parentDir()
+  let files =
+    if file.existsDir(): file.getFileRefs()
+    else: @[]
+  term.parentFiles = files
+
+proc setCurrentFiles(term: var Terminal) =
+  term.files = term.cwd.getFileRefs()
+  term.filteredFiles = term.files
+
+proc setChildFiles(term: var Terminal) =
+  let file = term.getSelectedFileFullPath()
+  let files =
+    if file.existsDir(): file.getFileRefs()
+    else: @[]
+  term.childFiles = files
+
+proc setFiles(term: var Terminal) =
+  term.setParentFiles()
+  term.setCurrentFiles()
+  term.setChildFiles()
 
 proc newTerminal(): Terminal =
   result = Terminal()
   result.cwd = getCurrentDir()
-  result.setCurrentFiles()
+  result.setFiles()
 
 proc exitProc() {.noconv.} =
   ## 終了処理
@@ -91,31 +119,56 @@ proc searchInteractively(term: var Terminal) =
       term.tb.display()
       sleep(20)
 
+func getSelectedFileIndex(files: seq[FileRef], name: string): int =
+  for i, f in files:
+    if f.name == name:
+      return i
+
 proc moveParentDir(term: var Terminal) =
   term.selectedItemIndex = 0
   let base = term.cwd.lastPathPart()
   term.cwd = term.cwd.parentDir()
-  term.setCurrentFiles()
-  for i, f in term.files:
-    if f.name == base:
-      term.selectedItemIndex = i
-      break
+  term.setFiles()
+  term.selectedItemIndex = term.files.getSelectedFileIndex(base)
 
 proc moveChildDir(term: var Terminal) =
   let base = term.files[term.selectedItemIndex]
   let path = term.cwd / base.name
   term.cwd = path
   term.selectedItemIndex = 0
-  term.setCurrentFiles()
+  term.setFiles()
 
 proc moveNextFile(term: var Terminal) =
   if term.selectedItemIndex < term.files.len - 1:
     inc(term.selectedItemIndex)
+  term.setChildFiles()
 
 proc movePreviousFile(term: var Terminal) =
   dec(term.selectedItemIndex)
   if term.selectedItemIndex < 0:
     term.selectedItemIndex = 0
+  term.setChildFiles()
+
+proc drawFilePane(tb: var TerminalBuffer, files: seq[FileRef],
+                  pageSize: int, selectedItemIndex: int, x, y, width: int) =
+  let startIdx = int(selectedItemIndex / pageSize) * pageSize
+  var
+    y = y
+    endIdx = startIdx + pageSize
+  if files.len <= endIdx:
+    endIdx = files.len - 1
+
+  for file in files[startIdx .. endIdx]:
+    if selectedItemIndex - startIdx == y:
+      tb.setBackgroundColor(bgGreen)
+    let
+      kind = ($file.kind)[2]
+      name = file.name
+      size = file.size
+      line = &"[{kind}] {name} {size}"
+    tb.write(x, y+1, line)
+    inc(y)
+    tb.resetAttributes()
 
 proc redraw(term: Terminal) =
   let cwd = term.cwd
@@ -123,28 +176,13 @@ proc redraw(term: Terminal) =
 
   let
     pageSize = term.height - 1
-    sIdx = term.selectedItemIndex
-    startIdx = int(sIdx / pageSize) * pageSize
-    files = term.filteredFiles
-
-  var
+    parentFileIndex = term.parentFiles.getSelectedFileIndex(cwd.lastPathPart)
+    width = int(term.width / 3)
     y = 0
-    endIdx = startIdx + pageSize
-  if files.len <= endIdx:
-    endIdx = files.len - 1
-
-  for path in files[startIdx .. endIdx]:
-    if sIdx - startIdx == y:
-      term.tb.setBackgroundColor(bgGreen)
-      output = cwd / path.name
-    let
-      kind = path.kind.`$`[2]
-      name = path.name
-      size = path.size
-      line = &"[{kind}] {name} {size}"
-    term.tb.write(0, y+1, line)
-    inc(y)
-    term.tb.resetAttributes()
+  term.tb.drawFilePane(term.parentFiles, pageSize, parentFileIndex, 0, y, 1)
+  term.tb.drawFilePane(term.files, pageSize, term.selectedItemIndex, width, y, 1)
+  term.tb.drawFilePane(term.childFiles, pageSize, 0, width*2, y, 1)
+  output = term.getSelectedFileFullPath()
 
 proc main =
   # 初期設定。とりあえずやっとく
