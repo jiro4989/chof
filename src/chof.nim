@@ -36,7 +36,7 @@ proc setCurrentFiles(term: var Terminal) =
       else: 0
     let f = FileRef(kind: kind, name: base, size: size)
     files.add(f)
-  files.sort()
+  files = files.sortedByIt(it.name)
   term.files = files
   term.filteredFiles = files
 
@@ -153,8 +153,13 @@ proc main =
           sleep(20)
     of Key.H:
       term.selectedItemIndex = 0
+      let base = term.cwd.lastPathPart()
       term.cwd = term.cwd.parentDir()
       term.setCurrentFiles()
+      for i, f in term.files:
+        if f.name == base:
+          term.selectedItemIndex = i
+          break
     of Key.J:
       if term.selectedItemIndex < term.files.len - 1:
         inc(term.selectedItemIndex)
