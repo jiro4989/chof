@@ -128,8 +128,9 @@ proc moveParentDir(term: var Terminal) =
   term.selectedItemIndex = 0
   let base = term.cwd.lastPathPart()
   term.cwd = term.cwd.parentDir()
-  term.setFiles()
-  term.selectedItemIndex = term.files.getSelectedFileIndex(base)
+  if term.cwd.dirExists():
+    term.setFiles()
+    term.selectedItemIndex = term.files.getSelectedFileIndex(base)
 
 proc moveChildDir(term: var Terminal) =
   let base = term.files[term.selectedItemIndex]
