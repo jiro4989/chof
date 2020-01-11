@@ -62,3 +62,23 @@ suite "setChildFiles":
     term.setChildFiles()
     check term.childFiles.len == 3
     check term.childFiles[0].name == "1.txt"
+
+suite "searchPrefix":
+  setup:
+    var term = Terminal(cwd: "./tests/testdata")
+    term.setFiles()
+  test "exists prefix":
+    term.searchPrefix('1')
+    check term.selectedItemIndex == 9
+  test "not exists prefix":
+    term.searchPrefix('a')
+    check term.selectedItemIndex == 0
+
+suite "getSelectedFileIndex":
+  setup:
+    var term = Terminal(cwd: "./tests/testdata")
+    term.setFiles()
+  test "exists name":
+    check term.files.getSelectedFileIndex("10.txt") == 9
+  test "not exists name":
+    check term.files.getSelectedFileIndex("aaaaaaaaaa.txt") == 0
