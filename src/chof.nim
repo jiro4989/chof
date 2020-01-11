@@ -7,7 +7,11 @@ import illwill
 
 var
   output: string
-  tty = open("/dev/tty", fmReadWrite)
+  tty =
+    when not defined modeTest:
+      open("/dev/tty", fmReadWrite)
+    else:
+      stdout
   oldStdin = stdin
   oldStdout = stdout
   searchQuery = ""
