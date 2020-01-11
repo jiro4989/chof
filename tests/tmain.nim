@@ -109,3 +109,45 @@ suite "moveChildDir":
     check term.parentFiles.len == 2
     check term.parentFiles[0].name == "1"
     check term.parentFiles[1].name == "2"
+
+suite "moveNextFile":
+  setup:
+    var term = Terminal(cwd: "./tests/testdata2")
+    term.setFiles()
+  test "./tests/testdata2":
+    term.moveNextFile()
+    check term.cwd.lastPathPart == "testdata2"
+    check term.files.len == 2
+    check term.childFiles.len == 3
+    check term.childFiles[0].name == "4.txt"
+    check term.parentFiles.len > 2
+  test "./tests/testdata2 (2 times)":
+    term.moveNextFile()
+    term.moveNextFile()
+    check term.cwd.lastPathPart == "testdata2"
+    check term.files.len == 2
+    check term.childFiles.len == 3
+    check term.childFiles[0].name == "4.txt"
+    check term.parentFiles.len > 2
+
+suite "movePreviousFile":
+  setup:
+    var term = Terminal(cwd: "./tests/testdata2")
+    term.setFiles()
+    term.moveNextFile()
+  test "./tests/testdata2":
+    term.movePreviousFile()
+    check term.cwd.lastPathPart == "testdata2"
+    check term.files.len == 2
+    check term.childFiles.len == 3
+    check term.childFiles[0].name == "1.txt"
+    check term.parentFiles.len > 2
+  test "./tests/testdata2 (2 times)":
+    term.movePreviousFile()
+    term.movePreviousFile()
+    check term.cwd.lastPathPart == "testdata2"
+    check term.files.len == 2
+    check term.childFiles.len == 3
+    check term.childFiles[0].name == "1.txt"
+    check term.parentFiles.len > 2
+
