@@ -1,6 +1,6 @@
 import unittest
 
-include dirsel
+include chof
 
 suite "proc listFilesGroupByPrefix":
   test "normal":
