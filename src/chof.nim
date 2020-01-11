@@ -205,7 +205,7 @@ proc main =
     term.tb = newTerminalBuffer(tw, th)
     term.width = tw
     term.height = th
-    #tb.setForegroundColor(fgWhite, true)
+    term.tb.setForegroundColor(fgWhite)
 
     # 画面の再描画
     term.redraw()
