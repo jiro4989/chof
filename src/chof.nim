@@ -166,7 +166,7 @@ proc movePreviousFile(term: var Terminal) =
     term.selectedItemIndex = 0
   term.setChildFiles()
 
-proc drawFilePane(tb: var TerminalBuffer, files: seq[FileRef],
+proc drawFilePane(tb: var TerminalBuffer, title: string, files: seq[FileRef],
                   pageSize: int, selectedItemIndex: int, x, y, width: int) =
   let startIdx = int(selectedItemIndex / pageSize) * pageSize
   var
@@ -175,8 +175,12 @@ proc drawFilePane(tb: var TerminalBuffer, files: seq[FileRef],
   if files.len <= endIdx:
     endIdx = files.len - 1
 
+  # draw pane frame
+  tb.drawRect(x, y, x+width-1, y+pageSize+2)
+  tb.write(x+2, y, &"[{title}]")
+
   for file in files[startIdx .. endIdx]:
-    if selectedItemIndex - startIdx == y:
+    if selectedItemIndex - startIdx == y-1:
       tb.setBackgroundColor(bgGreen)
     let
       kind = ($file.kind)[2]
@@ -187,7 +191,7 @@ proc drawFilePane(tb: var TerminalBuffer, files: seq[FileRef],
       tb.setForegroundColor(fgBlue)
     else:
       tb.setForegroundColor(fgWhite)
-    tb.write(x, y+1, line)
+    tb.write(x+1, y+1, line)
     inc(y)
     tb.resetAttributes()
 
@@ -196,13 +200,13 @@ proc redraw(term: Terminal) =
   term.tb.write(0, 0, cwd)
 
   let
-    pageSize = term.height - 1
+    pageSize = term.height - 4
     parentFileIndex = term.parentFiles.getSelectedFileIndex(cwd.lastPathPart)
     width = int(term.width / 3)
-    y = 0
-  term.tb.drawFilePane(term.parentFiles, pageSize, parentFileIndex, 0, y, 1)
-  term.tb.drawFilePane(term.files, pageSize, term.selectedItemIndex, width, y, 1)
-  term.tb.drawFilePane(term.childFiles, pageSize, 0, width*2, y, 1)
+    y = 1
+  term.tb.drawFilePane("Parent", term.parentFiles, pageSize, parentFileIndex, 0, y, width)
+  term.tb.drawFilePane("Current", term.files, pageSize, term.selectedItemIndex, width, y, width)
+  term.tb.drawFilePane("Child", term.childFiles, pageSize, 0, width*2, y, width)
   output = term.getSelectedFileFullPath()
 
 proc main =
