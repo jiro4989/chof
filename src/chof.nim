@@ -33,6 +33,8 @@ type
     childFiles: seq[FileRef]
     filteredFiles: seq[FileRef]
 
+func getPageSize(term: Terminal): int = term.height - 3
+
 func getSelectedFileFullPath(term: Terminal): string =
   let idx = term.selectedItemIndex
   let base = term.files[idx].name
@@ -153,28 +155,57 @@ proc moveChildDir(term: var Terminal) =
   term.selectedItemIndex = 0
   term.setFiles()
 
+proc moveNext(term: var Terminal, index: int) =
+  term.selectedItemIndex = index
+  if term.files.len <= index:
+    term.selectedItemIndex = term.files.len - 1
+  term.setChildFiles()
+
 proc moveNextFile(term: var Terminal) =
-  if term.selectedItemIndex < term.files.len - 1:
-    inc(term.selectedItemIndex)
+  let index = term.selectedItemIndex + 1
+  term.moveNext(index)
+
+proc moveNextPageFile(term: var Terminal) =
+  let pageSize = term.getPageSize
+  let index = int((term.selectedItemIndex + pageSize) / pageSize) * pageSize
+  term.moveNext(index)
+
+proc movePageBottomFile(term: var Terminal) =
+  let pageSize = term.getPageSize
+  let index = int((term.selectedItemIndex + pageSize) / pageSize) * pageSize - 1
+  term.moveNext(index)
+
+proc movePrevious(term: var Terminal, index: int) =
+  term.selectedItemIndex = index
+  if index < 0:
+    term.selectedItemIndex = 0
   term.setChildFiles()
 
 proc movePreviousFile(term: var Terminal) =
-  dec(term.selectedItemIndex)
-  if term.selectedItemIndex < 0:
-    term.selectedItemIndex = 0
-  term.setChildFiles()
+  let index = term.selectedItemIndex - 1
+  term.movePrevious(index)
+
+proc movePreviousPageFile(term: var Terminal) =
+  let pageSize = term.getPageSize
+  let index = int((term.selectedItemIndex - pageSize) / pageSize) * pageSize
+  term.movePrevious(index)
+
+proc movePageTopFile(term: var Terminal) =
+  let pageSize = term.getPageSize
+  let index = int((term.selectedItemIndex) / pageSize) * pageSize
+  term.movePrevious(index)
 
 proc drawFilePane(tb: var TerminalBuffer, title: string, files: seq[FileRef],
                   pageSize: int, selectedItemIndex: int, x, y, width: int) =
   let startIdx = int(selectedItemIndex / pageSize) * pageSize
   var
     y = y
-    endIdx = startIdx + pageSize
+    endIdx = startIdx + pageSize - 1
   if files.len <= endIdx:
     endIdx = files.len - 1
 
   # draw pane frame
-  tb.drawRect(x, y, x+width-1, y+pageSize+2)
+  tb.drawRect(x, y, x+width-1, y+pageSize+1)
   tb.write(x+2, y, &"[{title}]")
 
   for file in files[startIdx .. endIdx]:
@@ -182,9 +213,7 @@ proc drawFilePane(tb: var TerminalBuffer, title: string, files: seq[FileRef],
       tb.setBackgroundColor(bgGreen)
     let
       kind = ($file.kind)[2]
-      name = file.name
-      size = file.size
-      line = &"[{kind}] {name} {size}"
+      line = &"[{kind}] {file.name} {file.size}"
     if file.kind == pcDir:
       tb.setForegroundColor(fgBlue)
     else:
@@ -198,7 +227,7 @@ proc redraw(term: Terminal) =
   term.tb.write(0, 0, cwd)
 
   let
-    pageSize = term.height - 4
+    pageSize = term.getPageSize
     parentFileIndex = term.parentFiles.getSelectedFileIndex(cwd.lastPathPart)
     width = int(term.width / 3)
     y = 1
@@ -239,9 +268,13 @@ proc main =
       term.searchPrefix(key)
     of Key.I: term.searchInteractively()
     of Key.H: term.moveParentDir()
+    of Key.ShiftH: term.movePageTopFile()
     of Key.J: term.moveNextFile()
+    of Key.ShiftJ: term.moveNextPageFile()
     of Key.K: term.movePreviousFile()
+    of Key.ShiftK: term.movePreviousPageFile()
     of Key.L: term.moveChildDir()
+    of Key.ShiftL: term.movePageBottomFile()
     of Key.Enter: exitProc()
     else: discard
 
