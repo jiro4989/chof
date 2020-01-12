@@ -44,7 +44,7 @@ proc getFileRefs(path: string): seq[FileRef] =
     try:
       let base = path.lastPathPart()
       let size =
-        if kind == pcFile: getFileSize(path)
+        if path.existsFile: getFileSize(path)
         else: 0
       let f = FileRef(kind: kind, name: base, size: size)
       result.add(f)
