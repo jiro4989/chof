@@ -2,6 +2,19 @@ import unittest
 
 include chof
 
+doAssert "/".lastPathPart == ""
+doAssert "/tmp".lastPathPart == "tmp"
+block:
+  var cnt: int
+  for kind, path in walkDir("/"):
+    inc(cnt)
+  doAssert 3 < cnt
+block:
+  var cnt: int
+  for f in walkDir("/root"):
+    inc(cnt)
+  doAssert cnt == 0
+
 suite "getSelectedFileFullPath":
   test "Normal":
     #let term = Terminal(cwd = "/home/user")
@@ -63,6 +76,12 @@ suite "setChildFiles":
     check term.childFiles.len == 3
     check term.childFiles[0].name == "1.txt"
 
+suite "setFiles":
+  test "/":
+    var term = Terminal(cwd: "/")
+    term.setFiles()
+    check term.parentFiles.len == 0
+
 suite "searchPrefix":
   setup:
     var term = Terminal(cwd: "./tests/testdata")
@@ -84,16 +103,20 @@ suite "getSelectedFileIndex":
     check term.files.getSelectedFileIndex("aaaaaaaaaa.txt") == 0
 
 suite "moveParentDir":
-  setup:
+  test "./tests/testdata2/2":
     var term = Terminal(cwd: "./tests/testdata2/2")
     term.setFiles()
-  test "./tests/testdata2/2":
     term.moveParentDir()
     check term.cwd.lastPathPart == "testdata2"
     check term.files.len == 2
     check term.childFiles.len == 3
     check term.childFiles[0].name == "1.txt"
     check term.parentFiles.len > 2
+  test "/tmp":
+    var term = Terminal(cwd: "/tmp")
+    term.setFiles()
+    term.moveParentDir()
+    check term.cwd == "/"
 
 suite "moveChildDir":
   setup:

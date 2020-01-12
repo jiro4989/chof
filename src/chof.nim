@@ -8,7 +8,9 @@ import illwill
 var
   output: string
   tty =
-    when not defined modeTest:
+    when defined windows:
+      {.fatal "windows not supported".}
+    elif not defined modeTest:
       open("/dev/tty", fmReadWrite)
     else:
       stdout
@@ -41,18 +43,24 @@ func getSelectedFileFullPath(term: Terminal): string =
 
 proc getFileRefs(path: string): seq[FileRef] =
   for kind, path in walkDir(path):
-    let base = path.lastPathPart()
-    let size =
-      if kind == pcFile: getFileSize(path)
-      else: 0
-    let f = FileRef(kind: kind, name: base, size: size)
-    result.add(f)
+    try:
+      let base = path.lastPathPart()
+      let size =
+        if kind == pcFile: getFileSize(path)
+        else: 0
+      let f = FileRef(kind: kind, name: base, size: size)
+      result.add(f)
+    except OSError, IOError:
+      # ignore 'no such device or address error'
+      discard
   result = result.sortedByIt(it.name)
 
 proc setParentFiles(term: var Terminal) =
   let file = term.cwd.parentDir()
   let files =
     if file.existsDir(): file.getFileRefs()
+    elif term.cwd == "/": @[]
+    elif file == "": "/".getFileRefs() # root directory
     else: @[]
   term.parentFiles = files
 
@@ -132,11 +140,15 @@ proc moveParentDir(term: var Terminal) =
   term.selectedItemIndex = 0
   let base = term.cwd.lastPathPart()
   term.cwd = term.cwd.parentDir()
+  if term.cwd == "":
+    term.cwd = "/"
   if term.cwd.dirExists():
     term.setFiles()
     term.selectedItemIndex = term.files.getSelectedFileIndex(base)
 
 proc moveChildDir(term: var Terminal) =
+  if term.files.len < 1 or term.childFiles.len < 1:
+    return
   let base = term.files[term.selectedItemIndex]
   let path = term.cwd / base.name
   term.cwd = path
