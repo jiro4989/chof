@@ -33,15 +33,18 @@ type
     childFiles: seq[FileRef]
     filteredFiles: seq[FileRef]
 
-func getPageSize(term: Terminal): int = term.height - 3
+template getPageSize(term: Terminal): int =
+  term.height - 3
 
 func getSelectedFileFullPath(term: Terminal): string =
+  ## `selectedItemIndex` と `cwd` からフルパスを返す。
   let idx = term.selectedItemIndex
   let base = term.files[idx].name
   let path = term.cwd / base
   result = path
 
 proc getFileRefs(path: string): seq[FileRef] =
+  ## `path` 配下の `FileRef` のシーケンスを返す。
   for kind, path in walkDir(path):
     try:
       let base = path.lastPathPart()
@@ -56,6 +59,7 @@ proc getFileRefs(path: string): seq[FileRef] =
   result = result.sortedByIt(it.name)
 
 proc setParentFiles(term: var Terminal) =
+  ## 親ディレクトリのパスのファイルのシーケンスをセットする。
   let file = term.cwd.parentDir()
   let files =
     if file.existsDir(): file.getFileRefs()
@@ -65,10 +69,12 @@ proc setParentFiles(term: var Terminal) =
   term.parentFiles = files
 
 proc setCurrentFiles(term: var Terminal) =
+  ## `cwd` のパスのファイルのシーケンスをセットする。
   term.files = term.cwd.getFileRefs()
   term.filteredFiles = term.files
 
 proc setChildFiles(term: var Terminal) =
+  ## `selectedItemIndex` のディレクトリ配下のファイルのシーケンスをセットする。
   let file = term.getSelectedFileFullPath()
   let files =
     if file.existsDir(): file.getFileRefs()
@@ -76,6 +82,7 @@ proc setChildFiles(term: var Terminal) =
   term.childFiles = files
 
 proc setFiles(term: var Terminal) =
+  ## 親、cwd、子のファイルのシーケンスをセットする。
   term.setParentFiles()
   term.setCurrentFiles()
   term.setChildFiles()
@@ -86,7 +93,7 @@ proc newTerminal(): Terminal =
   result.setFiles()
 
 proc exitProc() {.noconv.} =
-  ## 終了処理
+  ## 終了処理。illwillの設定も復元する。
   illwillDeinit()
   showCursor()
 
@@ -99,6 +106,8 @@ proc exitProc() {.noconv.} =
   quit(0)
 
 proc searchPrefix(term: var Terminal, prefix: char) =
+  ## `files` を `prefix` の文字で検索し、最初にマッチしたインデックスを
+  ## `selectedItemIndex` にセットする。
   let
     idx = term.selectedItemIndex
     files = term.files
@@ -132,11 +141,13 @@ proc searchInteractively(term: var Terminal) =
       sleep(20)
 
 func getSelectedFileIndex(files: seq[FileRef], name: string): int =
+  ## `name` が `files` に完全一致したときのインデックスを返す。
   for i, f in files:
     if f.name == name:
       return i
 
 proc moveParentDir(term: var Terminal) =
+  ## `cwd` を親ディレクトリに移動する。
   term.selectedItemIndex = 0
   let base = term.cwd.lastPathPart()
   term.cwd = term.cwd.parentDir()
@@ -147,6 +158,7 @@ proc moveParentDir(term: var Terminal) =
     term.selectedItemIndex = term.files.getSelectedFileIndex(base)
 
 proc moveChildDir(term: var Terminal) =
+  ## `cwd` を子ディレクトリに移動する。
   if term.files.len < 1 or term.childFiles.len < 1:
     return
   let base = term.files[term.selectedItemIndex]
@@ -223,6 +235,9 @@ proc drawFilePane(tb: var TerminalBuffer, title: string, files: seq[FileRef],
     tb.resetAttributes()
 
 proc redraw(term: Terminal) =
+  ## 画面を再描画する。
+  ## 画面描画の処理はすべてこのプロシージャに集約し、他のプロシージャは `term`
+  ## のプロパティの操作のみを行う。
   let cwd = term.cwd
   term.tb.write(0, 0, cwd)
 

@@ -1,7 +1,7 @@
 chof - (choose file)
 ####################
 
-faker is inspired by `peco <https://github.com/peco/peco>`_.
+chof is inspired by `peco <https://github.com/peco/peco>`_.
 
 |demo|
 
