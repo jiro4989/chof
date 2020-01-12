@@ -1,7 +1,6 @@
-import os, strutils, tables, algorithm, sequtils
+import os, strutils, tables, algorithm
 from terminal import getch
 from strformat import `&`
-from unicode import toRunes, `$`
 
 import illwill
 
@@ -16,7 +15,6 @@ var
       stdout
   oldStdin = stdin
   oldStdout = stdout
-  searchQuery = ""
 
 type
   GroupedFiles* = OrderedTable[string, seq[string]]
