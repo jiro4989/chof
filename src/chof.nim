@@ -217,7 +217,7 @@ proc drawFilePane(tb: var TerminalBuffer, title: string, files: seq[FileRef],
     endIdx = files.len - 1
 
   # draw pane frame
-  tb.drawRect(x, y, x+width-1, y+pageSize+1)
+  tb.drawRect(x, y, x+width-1, y+pageSize+1, true)
   tb.write(x+2, y, &"[{title}]")
 
   for file in files[startIdx .. endIdx]:
