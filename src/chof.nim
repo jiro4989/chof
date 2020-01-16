@@ -281,6 +281,7 @@ proc main =
     of Key.F:
       let key = getch()
       term.searchPrefix(key)
+      term.setFiles()
     of Key.I: term.searchInteractively()
     of Key.H: term.moveParentDir()
     of Key.ShiftH: term.movePageTopFile()
