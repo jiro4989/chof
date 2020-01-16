@@ -292,6 +292,9 @@ proc main =
     of Key.L: term.moveChildDir()
     of Key.ShiftL: term.movePageBottomFile()
     of Key.Enter: exitProc()
+    of Key.Space:
+      output = term.cwd
+      exitProc()
     else: discard
 
     term.tb.display()
